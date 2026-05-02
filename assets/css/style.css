@@ -614,3 +614,26 @@ body{
     background-color: rgba(8, 87, 22, 0.1);
     transform: translateY(-5px);
 }
+
+/* --- Profile Picture in Header --- */
+.main-header nav {
+    gap: 15px; /* Add space between nav items */
+}
+
+.profile-link {
+    margin-left: auto; /* Pushes profile pic to the right, before other buttons */
+    line-height: 0; /* Removes extra space around the image */
+}
+
+.profile-pic-small {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgb(8, 87, 22);
+    transition: transform 0.2s;
+}
+
+.profile-pic-small:hover {
+    transform: scale(1.1);
+}

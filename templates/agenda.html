@@ -12,10 +12,16 @@
             <h1 class="logo">PETZEN</h1>
             <a href="/pets" class="btn">Meus Pets</a>
             <a href="/agenda" class="btn">Agenda</a>
-            <a href="/agendar-consulta" class="btn">Agendar Consulta</a>
             <a href="/calendario" class="btn">Calendário</a>
             <a href="/meu-plano" class="btn">Meu Plano</a>
-            <a href="/" class="btn">Sair</a>
+
+            {% if user %}
+            <a href="/perfil" class="profile-link">
+                <img src="{{ user.profile_pic_url }}" alt="Foto de Perfil" class="profile-pic-small">
+            </a>
+            {% endif %}
+
+            <a href="/logout" class="btn">Sair</a>
         </nav>
     </header>
 

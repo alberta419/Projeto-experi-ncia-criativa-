@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil - PETZEN</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="stylesheet" href="/assets/css/perfil.css">
+</head>
+<body>
+    <header class="main-header">
+        <nav>
+            <h1 class="logo">PETZEN</h1>
+            {% if user.role == 'cliente' %}
+                <a href="/pets" class="btn">Meus Pets</a>
+                <a href="/agenda" class="btn">Agenda</a>
+                <a href="/calendario" class="btn">Calendário</a>
+                <a href="/meu-plano" class="btn">Meu Plano</a>
+            {% elif user.role == 'admin' %}
+                <a href="/admin" class="btn">Painel Admin</a>
+            {% endif %}
+            
+            {% if user %}
+            <a href="/perfil" class="profile-link">
+                <img src="{{ user.profile_pic_url }}" alt="Foto de Perfil" class="profile-pic-small">
+            </a>
+            {% endif %}
+
+            <a href="/logout" class="btn">Sair</a>
+        </nav>
+    </header>
+
+    <main class="page-container">
+        <div class="content-box">
+            <h2 class="section-title">Editar Perfil</h2>
+
+            {% if success_msg %}
+            <div class="success-message">{{ success_msg }}</div>
+            {% endif %}
+
+            <form action="/perfil" method="post" enctype="multipart/form-data" class="profile-form">
+                <div class="profile-pic-section">
+                    <img src="{{ user.profile_pic_url }}" alt="Foto de Perfil" class="profile-pic-large">
+                    <label for="profile_pic_upload" class="btn">Trocar Foto</label>
+                    <input type="file" name="profile_pic" id="profile_pic_upload" accept="image/*" style="display: none;">
+                </div>
+
+                <div class="profile-fields">
+                    <div class="form-group">
+                        <label for="nome">Nome Completo</label>
+                        <input type="text" id="nome" name="nome" value="{{ user.nome }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="email" id="email" name="email" value="{{ user.email }}" required>
+                    </div>
+
+                    {% if user.role == 'cliente' and user.telefone %}
+                    <div class="form-group">
+                        <label for="telefone">Telefone</label>
+                        <input type="tel" id="telefone" name="telefone" value="{{ user.telefone }}" required>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-block">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </main>
+    <script>
+        document.getElementById('profile_pic_upload').onchange = function (evt) {
+            const [file] = this.files;
+            if (file) {
+                document.querySelector('.profile-pic-large').src = URL.createObjectURL(file);
+            }
+        };
+    </script>
+</body>
+</html>

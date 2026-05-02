@@ -1,11 +1,12 @@
-from fastapi import FastAPI, Form, Depends, Request
+from fastapi import FastAPI, Form, Depends, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import pymysql
 import mysql.connector
 import hashlib
 from datetime import date, datetime
+import shutil
+from pathlib import Path
 
 app = FastAPI()
 app.mount("/assets", StaticFiles(directory="assets"), name="assets")
@@ -31,14 +32,8 @@ def calcular_idade(nascimento):
         return f"{meses} meses"
     return f"{anos} anos"
 
-def get_db():
-    conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="root",
-        database="petshop"
-    )
-    
+def setup_database(conn):
+    """Executa a configuração inicial do banco de dados (criação de tabelas, etc)."""
     # Garante que a tabela clientes exista automaticamente!
     cursor = conn.cursor(buffered=True)
     cursor.execute("""
@@ -52,19 +47,28 @@ def get_db():
             senha VARCHAR(100) NOT NULL
         )
     """)
+
+    # Garante que a tabela clientes tenha a coluna de foto de perfil
+    try:
+        cursor.execute("ALTER TABLE clientes ADD COLUMN profile_pic_url VARCHAR(255) DEFAULT '/assets/img/default-profile.png'")
+    except mysql.connector.Error:
+        pass # Coluna já existe
     
+
     # Garante que a tabela pets tenha a coluna cliente_id para vincular o pet ao dono
     try:
         cursor.execute("ALTER TABLE pets ADD COLUMN cliente_id INT")
-    except:
+    except mysql.connector.Error:
         pass # Se der erro, é porque a coluna já existe
     
+
     # Garante que a tabela pets tenha as novas colunas de medidas
     try:
         cursor.execute("ALTER TABLE pets ADD COLUMN peso DECIMAL(5,2), ADD COLUMN altura DECIMAL(5,2), ADD COLUMN comprimento DECIMAL(5,2), ADD COLUMN largura DECIMAL(5,2)")
-    except:
+    except mysql.connector.Error:
         pass
     
+
     # Tabelas Administrativas
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS admin (
@@ -73,11 +77,21 @@ def get_db():
             senha VARCHAR(100) NOT NULL
         )
     """)
+    # Garante que a tabela admin tenha as colunas de nome e foto de perfil
+    try:
+        cursor.execute("ALTER TABLE admin ADD COLUMN nome VARCHAR(100) NOT NULL DEFAULT 'Admin'")
+    except mysql.connector.Error:
+        pass # Coluna já existe
+    try:
+        cursor.execute("ALTER TABLE admin ADD COLUMN profile_pic_url VARCHAR(255) DEFAULT '/assets/img/default-profile.png'")
+    except mysql.connector.Error:
+        pass # Coluna já existe
+
     # Cria um admin padrão caso não exista nenhum
     cursor.execute("SELECT * FROM admin WHERE email='admin@gmail.com'")
     if not cursor.fetchone():
         senha_admin = hash_senha('123456')
-        cursor.execute("INSERT INTO admin (email, senha) VALUES ('admin@gmail.com', %s)", (senha_admin,))
+        cursor.execute("INSERT INTO admin (email, senha, nome) VALUES ('admin@gmail.com', %s, 'Administrador')", (senha_admin,))
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS cargos (
@@ -97,7 +111,53 @@ def get_db():
     conn.commit()
     cursor.close()
     
+
+def get_db():
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        database="petshop"
+    )
     return conn
+
+# Bloco para configurar o banco de dados na inicialização do app.
+# Isso evita que a verificação de tabelas ocorra em cada request.
+def run_db_setup():
+    print("Iniciando verificação do banco de dados...")
+    try:
+        db_conn = get_db()
+        setup_database(db_conn)
+        db_conn.close()
+        print("Verificação do banco de dados concluída com sucesso.")
+    except Exception as e:
+        print(f"Erro ao configurar o banco de dados na inicialização: {e}")
+
+run_db_setup()
+
+async def get_current_user(request: Request, db: mysql.connector.connection.MySQLConnection = Depends(get_db)):
+    """Dependência para obter o usuário (cliente ou admin) logado a partir do cookie."""
+    user = None
+    user_id = None
+    role = None
+    table = None
+
+    if request.cookies.get("cliente_id"):
+        user_id = request.cookies.get("cliente_id")
+        table = "clientes"
+        role = "cliente"
+    elif request.cookies.get("admin_id"):
+        user_id = request.cookies.get("admin_id")
+        table = "admin"
+        role = "admin"
+
+    if user_id and table:
+        with db.cursor(dictionary=True) as cursor:
+            cursor.execute(f"SELECT * FROM {table} WHERE id=%s", (user_id,))
+            user = cursor.fetchone()
+            if user:
+                user['role'] = role
+    return user
 
 # ROTA PRINCIPAL (Página Inicial)
 @app.get("/", response_class=HTMLResponse)
@@ -118,7 +178,7 @@ def login(request: Request, email: str = Form(...), senha: str = Form(...), db=D
     if user:
         # Criamos o redirecionamento e salvamos quem logou em um "cookie" (sessão simples)
         response = RedirectResponse(url="/pets", status_code=303)
-        response.set_cookie(key="cliente_id", value=str(user["id"]))
+        response.set_cookie(key="cliente_id", value=str(user["id"]), httponly=True)
         return response
     
     return templates.TemplateResponse(request=request, name="home.html", context={"msg_login": "E-mail ou senha incorretos."})
@@ -127,6 +187,7 @@ def login(request: Request, email: str = Form(...), senha: str = Form(...), db=D
 def logout():
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("cliente_id")
+    response.delete_cookie("admin_id")
     return response
 
 # CADASTRO
@@ -178,24 +239,24 @@ def read_planos(request: Request):
 
 #PETS 
 @app.get("/pets", response_class=HTMLResponse)
-def listar_pets(request: Request, db=Depends(get_db)):
-    cliente_id = request.cookies.get("cliente_id")
-    if not cliente_id:
+def listar_pets(request: Request, db=Depends(get_db), user: dict = Depends(get_current_user)):
+    if not user or user.get('role') != 'cliente':
         return RedirectResponse(url="/", status_code=303)
 
+    cliente_id = user['id']
     with db.cursor(dictionary=True) as cursor:
         cursor.execute("SELECT * FROM pets WHERE cliente_id=%s", (cliente_id,))
         pets = cursor.fetchall()
         for pet in pets:
             pet['idade'] = calcular_idade(pet['nascimento'])
-    return templates.TemplateResponse(request=request, name="pets.html", context={"pets": pets})
+    return templates.TemplateResponse(request=request, name="pets.html", context={"pets": pets, "user": user})
 
 @app.post("/pets")
 def add_pet(request: Request, nome: str = Form(...), nascimento: str = Form(...),
             especie: str = Form(...), raca: str = Form(...),
             peso: float = Form(...), altura: float = Form(...),
             comprimento: float = Form(...), largura: float = Form(...),
-            db=Depends(get_db)):
+            db=Depends(get_db), user: dict = Depends(get_current_user)):
     cliente_id = request.cookies.get("cliente_id")
     if not cliente_id:
         return RedirectResponse(url="/", status_code=303)
@@ -210,12 +271,12 @@ def add_pet(request: Request, nome: str = Form(...), nascimento: str = Form(...)
 
 # AGENDA (Substitui o antigo /eventos GET)
 @app.get("/agenda", response_class=HTMLResponse)
-def listar_eventos(request: Request, db=Depends(get_db)):
-    cliente_id = request.cookies.get("cliente_id")
-    if not cliente_id:
+def listar_eventos(request: Request, db=Depends(get_db), user: dict = Depends(get_current_user)):
+    if not user or user.get('role') != 'cliente':
         return RedirectResponse(url="/", status_code=303)
 
     with db.cursor(dictionary=True) as cursor:
+        cliente_id = user['id']
         cursor.execute("""
             SELECT e.*, p.nome as pet_nome 
             FROM eventos e
@@ -227,7 +288,7 @@ def listar_eventos(request: Request, db=Depends(get_db)):
         cursor.execute("SELECT * FROM pets WHERE cliente_id=%s", (cliente_id,))
         pets = cursor.fetchall()
         
-    return templates.TemplateResponse(request=request, name="agenda.html", context={"eventos": eventos, "pets": pets})
+    return templates.TemplateResponse(request=request, name="agenda.html", context={"eventos": eventos, "pets": pets, "user": user})
 
 @app.post("/eventos")
 def add_evento(pet_id: int = Form(...), data: str = Form(...),
@@ -245,16 +306,66 @@ def add_evento(pet_id: int = Form(...), data: str = Form(...),
 
 # DEMAIS PÁGINAS DA ÁREA DO CLIENTE
 @app.get("/meu-plano", response_class=HTMLResponse)
-def read_meu_plano(request: Request):
-    return templates.TemplateResponse(request=request, name="Meu_plano.html")
+def read_meu_plano(request: Request, user: dict = Depends(get_current_user)):
+    if not user or user.get('role') != 'cliente':
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(request=request, name="Meu_plano.html", context={"user": user})
 
 @app.get("/calendario", response_class=HTMLResponse)
-def read_calendario(request: Request):
-    return templates.TemplateResponse(request=request, name="calendario.html")
+def read_calendario(request: Request, user: dict = Depends(get_current_user)):
+    if not user or user.get('role') != 'cliente':
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(request=request, name="calendario.html", context={"user": user})
 
-@app.get("/agendar-consulta", response_class=HTMLResponse)
-def read_agendar_consulta(request: Request):
-    return templates.TemplateResponse(request=request, name="Agendar_consulta.html")
+# ==========================================
+# ROTA DE PERFIL
+# ==========================================
+@app.get("/perfil", response_class=HTMLResponse)
+def read_profile(request: Request, user: dict = Depends(get_current_user)):
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    
+    success_msg = request.query_params.get('success_msg')
+    
+    return templates.TemplateResponse(
+        request=request, 
+        name="perfil.html", 
+        context={"user": user, "success_msg": success_msg}
+    )
+
+@app.post("/perfil")
+async def update_profile(
+    request: Request,
+    db: mysql.connector.connection.MySQLConnection = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    nome: str = Form(...),
+    email: str = Form(...),
+    telefone: str = Form(None),
+    profile_pic: UploadFile = File(None)
+):
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+
+    user_id = user['id']
+    profile_pic_url = user['profile_pic_url']
+
+    if profile_pic and profile_pic.filename:
+        Path("assets/img/profiles").mkdir(parents=True, exist_ok=True)
+        timestamp = int(datetime.now().timestamp())
+        file_extension = Path(profile_pic.filename).suffix
+        file_path = f"assets/img/profiles/user_{user['role']}_{user_id}_{timestamp}{file_extension}"
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(profile_pic.file, buffer)
+        profile_pic_url = "/" + file_path
+
+    with db.cursor() as cursor:
+        if user['role'] == 'cliente':
+            cursor.execute("UPDATE clientes SET nome=%s, email=%s, telefone=%s, profile_pic_url=%s WHERE id=%s", (nome, email, telefone, profile_pic_url, user_id))
+        elif user['role'] == 'admin':
+            cursor.execute("UPDATE admin SET nome=%s, email=%s, profile_pic_url=%s WHERE id=%s", (nome, email, profile_pic_url, user_id))
+        db.commit()
+
+    return RedirectResponse(url="/perfil?success_msg=Perfil atualizado com sucesso!", status_code=303)
 
 #FUNCIONARIOS
 @app.get("/funcionarios")
@@ -325,12 +436,16 @@ def process_login_admin(request: Request, email: str = Form(...), senha: str = F
         admin = cursor.fetchone()
     
     if admin:
-        return RedirectResponse(url="/admin", status_code=303)
+        response = RedirectResponse(url="/admin", status_code=303)
+        response.set_cookie(key="admin_id", value=str(admin["id"]), httponly=True)
+        return response
     
     return templates.TemplateResponse(request=request, name="loginAdm.html", context={"msg_login": "Credenciais inválidas."})
 
 @app.get("/admin", response_class=HTMLResponse)
-def painel_admin(request: Request, db=Depends(get_db)):
+def painel_admin(request: Request, db=Depends(get_db), user: dict = Depends(get_current_user)):
+    if not user or user.get('role') != 'admin':
+        return RedirectResponse(url="/login-admin", status_code=303)
     with db.cursor(dictionary=True) as cursor:
         cursor.execute("SELECT * FROM cargos")
         cargos = cursor.fetchall()
@@ -338,7 +453,7 @@ def painel_admin(request: Request, db=Depends(get_db)):
         funcionarios = cursor.fetchall()
         cursor.execute("SELECT id, nome, email, cpf, telefone FROM clientes")
         clientes = cursor.fetchall()
-    return templates.TemplateResponse(request=request, name="admin.html", context={"cargos": cargos, "funcionarios": funcionarios, "clientes": clientes})
+    return templates.TemplateResponse(request=request, name="admin.html", context={"cargos": cargos, "funcionarios": funcionarios, "clientes": clientes, "user": user})
 
 @app.post("/admin/cargos")
 def add_cargo_admin(nome: str = Form(...), db=Depends(get_db)):
