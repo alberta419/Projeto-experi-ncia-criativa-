@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área do Cliente - Agenda</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="icon" href="/assets/img/favicon.png" type="image/png">
+    <style>
+        .event-list { margin-top: 30px; }
+        .event-card { display: flex; align-items: center; background-color: #f9f9f9; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .event-date { text-align: center; margin-right: 20px; padding-right: 20px; border-right: 2px solid #eee; }
+        .event-date .day { font-size: 24px; font-weight: bold; color: #333; }
+        .event-date .month { font-size: 14px; color: #666; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <header class="main-header">
+        <nav>
+            <h1 class="logo">PETZEN</h1>
+            <div class="nav-links">
+                <a href="/pets" class="btn">Meus Pets</a>
+                <a href="/agenda" class="btn">Agenda</a>
+
+                {% if user %}
+                <a href="/perfil" class="profile-link">
+                    <img src="/profile-pic/{{ user.role }}/{{ user.id }}" alt="Foto de Perfil" class="profile-pic-small">
+                </a>
+                {% endif %}
+                <a href="/logout" class="btn">Sair</a>
+            </div>
+            <button class="hamburger-btn" aria-label="Abrir menu">☰</button>
+        </nav>
+    </header>
+
+    <main class="page-container">
+        <div class="content-box">
+            <!-- Mensagens de Sucesso e Erro -->
+            {% if success_msg %}
+            <div class="alert alert-success" style="color: green; background-color: #dff0d8; border: 1px solid #d6e9c6; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                {{ success_msg }}
+            </div>
+            {% endif %}
+
+            {% if error_msg %}
+            <div class="alert alert-danger" style="color: #a94442; background-color: #f2dede; border: 1px solid #ebccd1; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                {{ error_msg }}
+            </div>
+            {% endif %}
+
+            <div class="app">
+                <nav class="top-nav">
+                    <button class="btn active" data-page="agenda" onclick="showPage('agenda')">Agenda</button>
+                    <button class="btn" data-page="novo" onclick="showPage('novo')">Novo evento</button>
+                </nav>
+
+                <main class="main">
+                    <!-- Página: Agenda -->
+                    <div id="page-agenda" class="page active">
+                        <h2 class="section-title" style="text-align: left;">Meus Agendamentos</h2>
+                        {% if eventos %}
+                            {% for e in eventos %}
+                            <div class="event-card">
+                                <div class="event-date">
+                                    <span class="day">{{ e.data.strftime('%d') }}</span>
+                                    <span class="month">{{ e.data.strftime('%b') }}</span>
+                                </div>
+                                <div class="event-details">
+                                    <p class="event-title"><strong>{{ e.tipo }}</strong> para <strong>{{ e.pet_nome }}</strong></p>
+                                    <p class="event-time">Às {{ e.hora }} com <strong>{{ e.funcionario_nome | default('Profissional não definido', true) }}</strong></p>
+                                    <p class="event-description">{{ e.descricao }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="empty-state">
+                                <span class="empty-icon">🐾</span>
+                                <p>Nenhum evento agendado.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Página: Novo Evento -->
+                    <div id="page-novo" class="page">
+                        <h2 class="section-title" style="text-align: left;">Adicionar Novo Evento</h2>
+                        <form action="/eventos" method="POST">
+                            <div class="form-group">
+                                <label>Pet</label>
+                                <select name="pet_id" id="selectPet" required>
+                                    <option value="">Selecione o pet</option>
+                                    {% for pet in pets %}
+                                    <option value="{{ pet.id }}" data-plano="{{ pet.plano | default('Nenhum', true) }}">
+                                        {{ pet.nome }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo de Serviço</label>
+                                <select name="tipo" id="selectTipo" required>
+                                    <option value="">Selecione o tipo</option>
+                                    <option value="Banho e Tosa">Banho e Tosa</option>
+                                    <option value="Vacina">Vacina</option>
+                                    <option value="Consulta">Consulta</option>
+                                    <option value="Exame">Exame</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="funcionarioWrapper" style="display: none;">
+                                <label>Profissional</label>
+                                <select name="funcionario_id" id="selectFuncionario" required>
+                                    <option value="">Primeiro, selecione o tipo de serviço</option>
+                                </select>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Data</label>
+                                    <input type="date" name="data" id="inputData" required>
+                                </div>
+                                <div class="form-group" id="horarioWrapper" style="display: none;">
+                                    <label>Hora</label>
+                                    <select name="hora" id="selectHorario" required>
+                                        <option value="">Selecione data e profissional</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Alerta dinâmico do plano -->
+                            <div id="plan-alert" style="display: none; font-size: 0.9em; color: #1c7430; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 10px; margin-top: -10px; margin-bottom: 15px; border-radius: 4px;">
+                            </div>
+                            <div class="form-group">
+                                <label>Descrição</label>
+                                <input type="text" name="descricao" placeholder="Ex: Consulta de rotina" required>
+                            </div>
+                            <button type="submit" class="btn btn-block">Salvar Evento</button>
+                        </form>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </main>
+
+    <div class="success-toast" id="toast"></div>
+
+    <script>
+        function showPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + id).classList.add('active');
+            document.querySelectorAll('.top-nav .btn[data-page]').forEach(n => {
+                n.classList.toggle('active', n.dataset.page === id);
+            });
+        }
+    </script>
+
+    <!-- Passa os dados dos funcionários do backend (Python) para o frontend (JS) -->
+    <script>
+        const allFuncionarios = {{ funcionarios | tojson }};
+    </script>
+
+    <!-- SCRIPT DA LÓGICA DO PLANO -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectPet = document.getElementById('selectPet');
+        const selectTipo = document.getElementById('selectTipo');
+        const planAlert = document.getElementById('plan-alert');
+        const funcionarioWrapper = document.getElementById('funcionarioWrapper');
+        const selectFuncionario = document.getElementById('selectFuncionario');
+        const inputData = document.getElementById('inputData');
+        const horarioWrapper = document.getElementById('horarioWrapper');
+        const selectHorario = document.getElementById('selectHorario');
+
+
+        function checkPlanRules() {
+            // Pega a opção de pet selecionada
+            const selectedPetOption = selectPet.options[selectPet.selectedIndex];
+            const selectedTipo = selectTipo.value;
+
+            // Esconde o alerta se nenhum pet ou tipo for selecionado
+            if (!selectedPetOption || !selectedPetOption.value || !selectedTipo) {
+                planAlert.style.display = 'none';
+                return;
+            }
+
+            // Pega o plano do atributo data-plano
+            const petPlano = selectedPetOption.getAttribute('data-plano');
+
+            // REGRA: Se o plano for 'Básico' e o tipo for 'Vacina', mostra o alerta
+            if (petPlano === 'Básico' && selectedTipo === 'Vacina') {
+                planAlert.textContent = 'Lembrete: Seu Plano Básico oferece 30% de desconto para vacinas!';
+                planAlert.style.display = 'block';
+            } else {
+                planAlert.style.display = 'none';
+            }
+        }
+
+        function updateFuncionarioOptions() {
+            const tipoServico = selectTipo.value;
+            let cargoRequerido = null;
+
+            if (tipoServico === 'Banho e Tosa') {
+                cargoRequerido = 'Banhista';
+            } else if (['Consulta', 'Vacina', 'Exame'].includes(tipoServico)) {
+                cargoRequerido = 'Veterinário';
+            }
+
+            // Limpa as opções atuais
+            selectFuncionario.innerHTML = '<option value="">Selecione um profissional</option>';
+            horarioWrapper.style.display = 'none'; // Esconde horários ao mudar serviço
+            selectHorario.innerHTML = '<option value="">Selecione data e profissional</option>';
+
+            if (cargoRequerido) {
+                // Filtra os funcionários com o cargo correto
+                const funcionariosDisponiveis = allFuncionarios.filter(f => f.cargo === cargoRequerido);
+
+                if (funcionariosDisponiveis.length > 0) {
+                    funcionariosDisponiveis.forEach(func => {
+                        const option = new Option(func.nome, func.id);
+                        selectFuncionario.add(option);
+                    });
+                    funcionarioWrapper.style.display = 'block';
+                } else {
+                    selectFuncionario.innerHTML = '<option value="">Nenhum profissional disponível para este serviço</option>';
+                    funcionarioWrapper.style.display = 'block';
+                }
+            } else {
+                // Esconde o seletor se nenhum tipo de serviço for selecionado
+                funcionarioWrapper.style.display = 'none';
+            }
+        }
+
+        async function fetchHorariosDisponiveis() {
+            const data = inputData.value;
+            const tipo = selectTipo.value;
+            const funcionarioId = selectFuncionario.value;
+
+            if (!data || !tipo || !funcionarioId) {
+                horarioWrapper.style.display = 'none';
+                return;
+            }
+
+            selectHorario.innerHTML = '<option value="">Carregando...</option>';
+            horarioWrapper.style.display = 'block';
+
+            try {
+                const response = await fetch(`/api/horarios-disponiveis?data=${data}&tipo=${tipo}&funcionario_id=${funcionarioId}`);
+                const horarios = await response.json();
+
+                selectHorario.innerHTML = ''; // Limpa o "Carregando..."
+
+                if (horarios.length > 0) {
+                    horarios.forEach(horario => {
+                        const option = new Option(horario, horario);
+                        selectHorario.add(option);
+                    });
+                } else {
+                    selectHorario.innerHTML = '<option value="">Sem horários disponíveis</option>';
+                }
+            } catch (error) {
+                console.error('Erro ao buscar horários:', error);
+                selectHorario.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
+        }
+
+        // Adiciona os "escutadores" de eventos
+        if (selectPet) { selectPet.addEventListener('change', checkPlanRules); }
+        if (selectTipo) { selectTipo.addEventListener('change', () => { checkPlanRules(); updateFuncionarioOptions(); }); }
+        if (selectFuncionario) { selectFuncionario.addEventListener('change', fetchHorariosDisponiveis); }
+        if (inputData) {
+            // Define a data mínima como hoje para o campo de data
+            const today = new Date().toISOString().split('T')[0];
+            inputData.setAttribute('min', today);
+            inputData.addEventListener('change', fetchHorariosDisponiveis);
+        }
+    });
+    </script>
+    <script src="/assets/script.js"></script>
+</body>
+</html>

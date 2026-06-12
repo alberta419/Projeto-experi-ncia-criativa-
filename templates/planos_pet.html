@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plano para {{ pet.nome }}</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <header class="main-header">
+        <nav>
+            <h1 class="logo">PETZEN</h1>
+            <div class="nav-links">
+                <a href="/pets" class="btn">Meus Pets</a>
+                <a href="/agenda" class="btn">Agenda</a>
+                {% if user %}
+                <a href="/perfil" class="profile-link">
+                    <img src="/profile-pic/{{ user.role }}/{{ user.id }}" alt="Foto de Perfil" class="profile-pic-small">
+                </a>
+                {% endif %}
+                <a href="/logout" class="btn">Sair</a>
+            </div>
+            <button class="hamburger-btn" aria-label="Abrir menu">☰</button>
+        </nav>
+    </header>
+    <main class="page-container">
+        <div class="content-box">
+            <h1 class="page-title">Escolha um Plano para {{ pet.nome }}</h1>
+            <form action="/pets/{{ pet.id }}/plano" method="POST">
+                <div class="plans-container">
+                    <!-- Card Plano Básico -->
+                    <div class="card plan-card">
+                        <h2>Plano Básico</h2>
+                        <ul>
+                            <li>1 Banho e tosa por mês</li>
+                            <li>Consultas veterinárias de rotina</li>
+                            <li>Descontos em vacinas</li>
+                        </ul>
+                        <div class="plan-select">
+                            <label>
+                                <input type="radio" name="plano" value="Básico" {% if pet.plano == 'Básico' %}checked{% endif %} required>
+                                Selecionar Plano Básico
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Card Plano Avançado -->
+                    <div class="card plan-card">
+                        <h2>Plano Avançado</h2>
+                        <ul>
+                            <li>4 Banhos e tosas por mês</li>
+                            <li>Consultas e exames de rotina ilimitados</li>
+                            <li>Vacinação anual completa inclusa</li>
+                        </ul>
+                        <div class="plan-select">
+                            <label>
+                                <input type="radio" name="plano" value="Avançado" {% if pet.plano == 'Avançado' %}checked{% endif %} required>
+                                Selecionar Plano Avançado
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-rounded btn-contratar">Salvar Plano para {{ pet.nome }}</button>
+            </form>
+        </div>
+    </main>
+    <script src="/assets/script.js"></script>
+</body>
+</html>

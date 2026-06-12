@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página Inicial</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <header class="main-header">
+        <nav>
+            <h1 class="logo">PETZEN</h1>
+            <div class="nav-links">
+                <a href="#quem-somos" class="btn">Quem somos</a>
+                <a href="#servicos" class="btn">Serviços</a>
+                <a href="#onde-estamos" class="btn">Onde estamos</a>
+                {% if user %}
+                    <a href="/logout" class="btn">Sair</a>
+                {% else %}
+                    <a href="/login" id="botaoAreaCliente" class="btn">Área do cliente</a>
+                {% endif %}
+            </div>
+            <button class="hamburger-btn" aria-label="Abrir menu">☰</button>
+        </nav>
+    </header>
+
+    <!-- Seção Quem Somos -->
+    <section id="quem-somos" class="home-section">
+        <div class="content-box">
+            <h2 class="section-title">Quem Somos</h2>
+            <p>A PETZEN nasceu do amor incondicional pelos animais. Somos mais do que uma clínica veterinária; somos um centro de bem-estar completo, dedicado a oferecer o melhor cuidado para o seu pet. Nossa equipe é formada por profissionais apaixonados e altamente qualificados, prontos para atender seu amigo com carinho, respeito e a máxima competência.</p>
+        </div>
+    </section>
+
+    <!-- Seção Serviços -->
+    <section id="servicos" class="home-section">
+        <div class="content-box">
+            <h2 class="section-title">Nossos Serviços</h2>
+            <p>Oferecemos uma gama completa de serviços para garantir a saúde e a felicidade do seu companheiro.</p>
+            <div class="services-container">
+                <div class="card service-card">
+                    <h3>Consultas e Vacinas</h3>
+                    <p>Cuidado preventivo e acompanhamento da saúde do seu pet em todas as fases da vida.</p>
+                </div>
+                <div class="card service-card">
+                    <h3>Banho e Tosa</h3>
+                    <p>Profissionais especializados para cuidar da higiene e beleza do seu animal com produtos de alta qualidade.</p>
+                </div>
+                <div class="card service-card">
+                    <h3>Exames Laboratoriais</h3>
+                    <p>Diagnósticos precisos com equipamentos modernos para um tratamento eficaz.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Seção Onde Estamos -->
+    <section id="onde-estamos" class="home-section">
+        <div class="content-box">
+            <h2 class="section-title">Onde Estamos</h2>
+            <p>Nossa clínica está localizada no coração da cidade, em um ambiente pensado para o conforto e a segurança do seu pet. Venha nos visitar!</p>
+            <p><strong>Endereço:</strong> Rua dos Animais Felizes, 123 - Bairro Pet Amigo - Cidade/UF</p>
+        </div>
+    </section>
+
+    <!-- Popup de Login -->
+    <div class="popup-wrapper {% if open_login or msg_login %}active{% endif %}" id="popupLogin">
+        <div class="popup-content">
+            <span class="close-btn" id="fecharPopupLogin">&times;</span>
+            <main class="login-form-container">
+                <form id="loginForm" action="/login" method="POST" autocomplete="off">
+                    <h1>Login</h1>
+                    {% if msg_login %}
+                        <small class="field-error" style="text-align:center; display:block; margin-bottom:10px; font-size:14px; {% if 'sucesso' in msg_login %}color: rgb(12, 128, 33);{% endif %}">{{ msg_login }}</small>
+                    {% endif %}
+                    <div class="form-group">
+                        <label for="login-user">USUÁRIO</label>
+                        <input name="email" id="login-user" placeholder="E-mail" type="email" value="{{ saved_email | default('') }}" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-pass">SENHA</label>
+                        <div class="password-container">
+                            <input name="senha" id="login-pass" placeholder="Senha" type="password" required autocomplete="new-password">
+                            <span class="toggle-password" data-target="login-pass">👁️</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="loginSubmitBtn" class="btn btn-block btn-rounded">Login</button>
+
+                    <div class="link-registro">
+                        <p>Não tem uma conta? <a href="#" id="abrirCadastroDoLogin">Cadastre-se</a></p>
+                    </div>
+                </form>
+            </main>
+        </div>
+    </div>
+
+    <!-- Popup de Cadastro -->
+    <div class="popup-wrapper {% if open_cadastro %}active{% endif %}" id="popupCadastro">
+        <div class="popup-content">
+            <span class="close-btn" id="fecharPopupCadastro">&times;</span>
+            <main class="cadastro-form-container">
+                <form action="/cadastro" method="POST" id="registerForm" novalidate>
+                    <h1>Cadastro</h1>
+                    <div class="form-group">
+                        <label for="fullName">NOME COMPLETO</label>
+                        <input id="fullName" name="fullName" type="text" placeholder="NOME COMPLETO" value="{{ form_data.fullName if form_data else '' }}" required>
+                        <small class="field-error" id="nameError" aria-live="polite"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">E-MAIL</label>
+                        <input id="email" name="email" placeholder="E-MAIL" type="email" value="{{ form_data.email if form_data else '' }}" required>
+                        <small class="field-error" id="emailError" aria-live="polite">{% if error_field == 'email' %}{{ error_msg }}{% endif %}</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cpf">CPF</label>
+                            <input id="cpf" name="cpf" type="text" placeholder="CPF" value="{{ form_data.cpf if form_data else '' }}" required maxlength="14">
+                            <small class="field-error" id="cpfError" aria-live="polite">{% if error_field == 'cpf' %}{{ error_msg }}{% endif %}</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="birth">DATA NASC.</label>
+                            <input id="birth" name="birth" type="text" placeholder="DD/MM/AAAA" value="{{ form_data.birth if form_data else '' }}" required maxlength="10">
+                            <small class="field-error" id="birthError" aria-live="polite"></small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">TELEFONE</label>
+                        <input id="phone" name="phone" type="tel" inputmode="numeric" placeholder="(DD)99999-9999" value="{{ form_data.phone if form_data else '' }}" maxlength="14" required>
+                        <small class="field-error" id="phoneError" aria-live="polite">{% if error_field == 'phone' %}{{ error_msg }}{% endif %}</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="password">SENHA</label>
+                            <div class="password-container">
+                                <input id="password" name="password" type="password" placeholder="SENHA" required>
+                                <span class="toggle-password" data-target="password">👁️</span>
+                            </div>
+                            <small class="field-error" id="passwordError" aria-live="polite"></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">CONFIRMAR SENHA</label>
+                            <div class="password-container">
+                                <input id="confirmPassword" name="confirmPassword" type="password" placeholder="CONFIRMAR SENHA" required>
+                                <span class="toggle-password" data-target="confirmPassword">👁️</span>
+                            </div>
+                            <small class="field-error" id="confirmPasswordError" aria-live="polite"></small>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-block btn-rounded">Criar conta</button>
+                    <div class="link-registro">
+                        <p>Já tem uma conta? <a href="#" id="abrirLoginDoCadastro">Login</a></p>
+                    </div>
+                </form>
+            </main>
+        </div>
+    </div>
+
+    <!-- Notificação de sucesso (toast) que aparece temporariamente -->
+    <div class="success-toast" id="toast"></div>
+
+<script src="/assets/js/agenda-pet.js"></script>
+<script src="/assets/script.js"></script>
+<script src="/assets/login.js"></script>
+</body>
+</html>

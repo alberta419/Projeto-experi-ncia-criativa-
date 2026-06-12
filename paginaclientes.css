@@ -1,0 +1,57 @@
+/* Admin clients page styles, built to match home-style.css palette */
+
+:root{
+  --green: rgb(8,87,22);
+  --pink: rgb(212,140,145);
+  --muted: rgba(0,0,0,0.06);
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; font-family: "Iosevka Charon", monospace; }
+body{ min-height:100vh; background: url('../files/fundo.png') center/cover no-repeat; color:var(--green); }
+
+/* reuse header styles from home-style.css but keep local safety */
+.main-header{ background-color: rgba(212,140,145,0.95); border-bottom:2px solid var(--green); padding:12px 36px; position:fixed; top:0; left:0; right:0; z-index:60; }
+.main-header nav{ display:flex; align-items:center; gap:18px; }
+.logo{ margin-right:auto; font-size:28px; font-weight:700; color:var(--green); }
+.nav-btn{ display:inline-block; padding:8px 20px; background: var(--green); color: var(--pink); border-radius:40px; font-weight:600; text-decoration:none; border:1px solid var(--green); }
+.nav-btn:hover{ background: rgb(11,121,31); }
+
+.container.admin-container{ max-width:1200px; margin:0 auto; padding:110px 20px 48px; }
+.container h2{ font-size:28px; margin-bottom:12px; }
+
+.admin-grid{ display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
+
+.client-list{ width:320px; background: rgba(255,255,255,0.94); padding:14px; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.06); max-width: 100%; }
+.client-list input[type="search"]{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--muted); margin-bottom:12px; }
+.client-list ul{ list-style:none; max-height:66vh; overflow:auto; padding-right:6px; }
+.client-item{ padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:6px; border:1px solid transparent; }
+.client-item + .client-item{ margin-top:8px; }
+.client-btn{ text-align:left; background:transparent; border:none; font-weight:700; color:var(--green); font-size:15px; cursor:pointer; }
+.client-item small{ color:#666; }
+.client-item:hover{ background:rgba(8,87,22,0.03); border-color:rgba(8,87,22,0.04); }
+
+.client-details{ flex:1; min-height:60vh; background: rgba(255,255,255,0.95); padding:18px; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.06); }
+.client-card{ display:flex; flex-direction:column; gap:12px; }
+.client-header{ display:flex; justify-content:space-between; align-items:center; }
+.client-name{ margin:0; }
+.client-email{ margin:0; color:#444; }
+.client-info, .client-pets, .client-appointments{ background: #fff; padding:12px; border-radius:10px; border:1px solid var(--muted); }
+.client-pets ul, .client-appointments ul{ list-style:none; padding-left:0; margin:0; }
+.client-pets li, .client-appointments li{ padding:8px 6px; border-bottom:1px dashed rgba(0,0,0,0.04); }
+.client-pets li:last-child, .client-appointments li:last-child{ border-bottom:none; }
+
+/* buttons */
+.btn{ padding:8px 14px; border-radius:12px; cursor:pointer; border:none; font-weight:600; }
+.btn-primary{ background:var(--green); color:var(--pink); }
+.btn-secondary{ background:#f7f7f7; color:#222; border:1px solid rgba(0,0,0,0.06); }
+
+.empty-state{ color:#555; padding:36px; text-align:center; }
+.hidden{ display:none; }
+
+/* responsive */
+@media (max-width:900px){
+  .admin-grid{ flex-direction:column; }
+  .client-list{ width:100%;}
+  .client-details{ width:100% }
+  .container.admin-container{ padding:120px 12px 36px; }
+}

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <main class="container d-flex justify-content-center align-items-center vh-100">">
+        <form class="p-4 shadow rounded bg-white" action="/login" method="post">
+            <h1 class= class="text-center mb-3">Login</h1>
+            <div class="input-box">
+                <input placeholder="Usuário" type="email">
+            </div>
+             <div class="input-box">
+                <input placeholder="Senha" type="password">
+            </div>
+            <div class="remember-forgot">
+                <label>
+                    <input type="checkbox">
+                    Lembrar senha
+                </label>
+                <a href="#">Esqueci a senha</a>
+            </div>
+
+            <button type="submit">Login</button>
+
+            <div class="link-registro">
+                <p>Não tem uma conta? <a href="#">Cadastre-se</a><p>
+            </div>
+        </form>
+
+    </main>
+</body>

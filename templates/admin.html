@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <header class="main-header">
+        <nav>
+            <h1 class="logo">PETZEN - ADMIN</h1>
+            <div class="nav-links">
+                <a href="/logout" class="btn">Sair do Painel</a>
+            </div>
+            <button class="hamburger-btn" aria-label="Abrir menu">☰</button>
+        </nav>
+    </header>
+
+    <main class="page-container">
+        <div class="content-box" style="max-width: 1200px;">
+            <h1 class="page-title">Gestão de Equipe</h1>
+            
+            <div class="form-row" style="align-items: flex-start;">
+                <div class="card" style="flex: 1; text-align: left;">
+                    <h2 class="section-title" style="font-size: 24px;">Novo Cargo</h2>
+                    <form action="/admin/cargos" method="POST">
+                        <div class="form-group">
+                            <label>Nome do Cargo</label>
+                            <input type="text" name="nome" placeholder="Ex: Veterinário" required>
+                        </div>
+                        <button type="submit" class="btn">Adicionar Cargo</button>
+                    </form>
+                </div>
+
+                <div class="card" style="flex: 2; text-align: left;">
+                    <h2 class="section-title" style="font-size: 24px;">Novo Funcionário</h2>
+                    <form action="/admin/funcionarios" method="POST">
+                        <div class="form-group">
+                            <label>Nome Completo</label>
+                            <input type="text" name="nome" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Cargo</label>
+                                <select name="cargo" required>
+                                    <option value="">Selecione um cargo</option>
+                                    {% for c in cargos %}
+                                    <option value="{{ c.nome }}">{{ c.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Salário (R$)</label>
+                                <input type="number" step="0.01" name="salario" placeholder="Ex: 2500.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Telefone</label>
+                                <input type="tel" name="telefone" inputmode="numeric" placeholder="(DD)99999-9999" maxlength="14" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn">Cadastrar Funcionário</button>
+                    </form>
+                </div>
+            </div>
+
+            <hr style="margin: 40px 0; border-top: 1px solid #ccc;">
+
+            <h2 class="section-title">Quadro de Funcionários Cadastrados</h2>
+            <div class="pets-grid-container">
+                {% for f in funcionarios %}
+                <div class="pet-card" style="padding: 20px; border-radius: 8px;">
+                    <form action="/admin/funcionarios/{{ f.id }}/deletar" method="POST" style="position: absolute; top: 10px; right: 10px;">
+                        <button type="submit" class="del-btn" onclick="return confirm('Tem certeza que deseja remover o funcionário {{ f.nome }}?')" title="Demitir Funcionário">✕</button>
+                    </form>
+                    <div class="pet-avatar">👨‍💼</div>
+                    <div class="pet-card-name" style="margin-bottom: 5px;">{{ f.nome }}</div>
+                    <div class="pet-card-info" style="font-weight: bold; color: rgb(12, 128, 33);">{{ f.cargo }}</div>
+                    <div class="pet-card-info">R$ {{ f.salario }}</div>
+                    <div class="pet-card-info">{{ f.telefone }}</div>
+                    <button class="btn" style="margin-top: 10px; width: 100%; background-color: #e8a020;"
+                        onclick="abrirPopupEditarFuncionario({{ f.id }}, '{{ f.nome }}', '{{ f.cargo }}', {{ f.salario }}, '{{ f.telefone }}')">
+                        ✏️ Editar
+                    </button>
+                </div>
+                {% else %}
+                <p style="grid-column: 1/-1; color: #888;">Nenhum funcionário cadastrado ainda.</p>
+                {% endfor %}
+            </div>
+
+            <hr style="margin: 40px 0; border-top: 1px solid #ccc;">
+
+            <h2 class="section-title">Clientes Cadastrados</h2>
+            <div class="pets-grid-container">
+                {% for c in clientes %}
+                <!-- Adicionada a classe 'client-card' para ativar o CSS do tooltip -->
+                <div class="pet-card client-card" style="padding: 20px; border-radius: 8px;">
+                    <form action="/admin/clientes/{{ c.id }}/deletar" method="POST" style="position: absolute; top: 10px; right: 10px;">
+                        <button type="submit" class="del-btn" onclick="return confirm('Atenção: Isso excluirá o cliente, todos os seus pets e agendamentos. Deseja continuar?');" title="Excluir Cliente">✕</button>
+                    </form>
+                    <img src="/profile-pic/cliente/{{ c.id }}" alt="Foto de {{ c.nome }}" class="pet-avatar-img">
+                    <div class="pet-card-name" style="margin-bottom: 5px;">{{ c.nome }}</div>
+                    
+                    <!-- O botão de editar continua visível -->
+                    <button class="btn" style="margin-top: 10px; width: 100%; background-color: #e8a020;"
+                        onclick="abrirPopupEditarCliente({{ c.id }}, '{{ c.nome }}', '{{ c.email }}', '{{ c.cpf }}', '{{ c.telefone }}')">
+                        ✏️ Editar
+                    </button>
+
+                    <!-- Tooltip com as informações detalhadas, que aparece no hover -->
+                    <div class="client-tooltip">
+                        <p><strong>Email:</strong> {{ c.email }}</p>
+                        <p><strong>CPF:</strong> {{ c.cpf }}</p>
+                        <p><strong>Telefone:</strong> {{ c.telefone }}</p>
+                        {% if c.pets %}
+                            <hr style="border:0; border-top: 1px solid #eee; margin: 8px 0;">
+                            <p><strong>Pets:</strong></p><ul>{% for pet in c.pets %}<li>- {{ pet.nome }} ({{ pet.especie }})</li>{% endfor %}</ul>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <p style="grid-column: 1/-1; color: #888;">Nenhum cliente cadastrado ainda.</p>
+                {% endfor %}
+            </div>
+
+            <hr style="margin: 40px 0; border-top: 1px solid #ccc;">
+
+            <h2 class="section-title">Pets Cadastrados</h2>
+            <div class="pets-grid-container">
+                {% for p in pets %}
+                <div class="pet-card" style="padding: 20px; border-radius: 8px;">
+                    <form action="/admin/pets/{{ p.id }}/deletar" method="POST" style="position: absolute; top: 10px; right: 10px;">
+                        <button type="submit" class="del-btn" onclick="return confirm('Tem certeza que deseja remover o pet {{ p.nome }}?')" title="Remover Pet">✕</button>
+                    </form>
+                    <div class="pet-avatar">
+                        {% if p.especie == 'Gato' %}🐱{% elif p.especie == 'Cachorro' %}🐶{% else %}🐾{% endif %}
+                    </div>
+                    <div class="pet-card-name" style="margin-bottom: 5px;">{{ p.nome }}</div>
+                    <div class="pet-card-info" style="font-weight: bold; color: rgb(12, 128, 33);">Dono: {{ p.cliente_nome }}</div>
+                    <div class="pet-card-info">{{ p.especie }} - {{ p.raca }}</div>
+                    <div class="pet-card-info">Peso: {{ p.peso }} kg</div>
+                    <div class="pet-card-info">Plano: {{ p.plano }}</div>
+                </div>
+                {% else %}
+                <p style="grid-column: 1/-1; color: #888;">Nenhum pet cadastrado ainda.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+
+    <!-- Popup de Editar Funcionário -->
+    <div class="popup-wrapper" id="popupEditarFuncionario">
+        <div class="popup-content" style="width: 500px; max-width: 95vw;">
+            <span class="close-btn" id="fecharPopupEditarFuncionario">&times;</span>
+            <form id="formEditarFuncionario" action="" method="POST">
+                <h2 class="section-title" style="font-size: 24px; margin-bottom: 20px;">Editar Funcionário</h2>
+                <div class="form-group">
+                    <label>Nome Completo</label>
+                    <input type="text" name="nome" id="editFuncNome" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Cargo</label>
+                        <select name="cargo" id="editFuncCargo" required>
+                            {% for c in cargos %}
+                            <option value="{{ c.nome }}">{{ c.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Salário (R$)</label>
+                        <input type="number" step="0.01" name="salario" id="editFuncSalario" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Telefone</label>
+                    <input type="tel" name="telefone" id="editFuncTelefone" maxlength="14">
+                </div>
+                <button type="submit" class="btn btn-block btn-rounded">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Popup de Editar Cliente -->
+    <div class="popup-wrapper" id="popupEditarCliente">
+        <div class="popup-content" style="width: 500px; max-width: 95vw;">
+            <span class="close-btn" id="fecharPopupEditarCliente">&times;</span>
+            <form id="formEditarCliente" action="" method="POST">
+                <h2 class="section-title" style="font-size: 24px; margin-bottom: 20px;">Editar Cliente</h2>
+                <div class="form-group">
+                    <label>Nome Completo</label>
+                    <input type="text" name="nome" id="editClienteNome" required>
+                </div>
+                <div class="form-group">
+                    <label>E-mail</label>
+                    <input type="email" name="email" id="editClienteEmail" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>CPF</label>
+                        <input type="text" name="cpf" id="editClienteCpf" maxlength="14" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <input type="tel" name="telefone" id="editClienteTelefone" maxlength="14">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-block btn-rounded">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const telefoneInput = document.querySelector('input[name="telefone"]');
+        if (telefoneInput) {
+            telefoneInput.addEventListener('input', function() {
+                let v = this.value.replace(/\D/g, '');
+                v = v.replace(/^(\d{2})(\d)/g, '($1)$2');
+                v = v.replace(/(\d{4,5})(\d{4})$/, '$1-$2');
+                this.value = v.substring(0, 14);
+            });
+        }
+
+        function abrirPopupEditarFuncionario(id, nome, cargo, salario, telefone) {
+            document.getElementById('formEditarFuncionario').action = '/admin/funcionarios/' + id + '/editar';
+            document.getElementById('editFuncNome').value = nome;
+            document.getElementById('editFuncCargo').value = cargo;
+            document.getElementById('editFuncSalario').value = salario;
+            document.getElementById('editFuncTelefone').value = telefone;
+            document.getElementById('popupEditarFuncionario').classList.add('active');
+        }
+
+        document.getElementById('fecharPopupEditarFuncionario').addEventListener('click', function() {
+            document.getElementById('popupEditarFuncionario').classList.remove('active');
+        });
+
+        function abrirPopupEditarCliente(id, nome, email, cpf, telefone) {
+            document.getElementById('formEditarCliente').action = '/admin/clientes/' + id + '/editar';
+            document.getElementById('editClienteNome').value = nome;
+            document.getElementById('editClienteEmail').value = email;
+            document.getElementById('editClienteCpf').value = cpf;
+            document.getElementById('editClienteTelefone').value = telefone;
+            document.getElementById('popupEditarCliente').classList.add('active');
+        }
+
+        document.getElementById('fecharPopupEditarCliente').addEventListener('click', function() {
+            document.getElementById('popupEditarCliente').classList.remove('active');
+        });
+    </script>
+    <script src="/assets/script.js"></script>
+</body>
+</html>
